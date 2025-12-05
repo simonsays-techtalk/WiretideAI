@@ -162,7 +162,7 @@ server {
         proxy_read_timeout 60s;
     }
 }
-EOF"
+EOF
 fi
 run ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/wiretide.conf
 run rm -f /etc/nginx/sites-enabled/default
