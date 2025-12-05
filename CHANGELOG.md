@@ -28,6 +28,7 @@ All notable changes to this project will be documented in this file.
 - Added tabbed device detail UI (Live/Firewall/Clients/Logs/Advanced) with reusable actions.
 - Router/AP tabs rendered conditionally; UI shows admin badge; action buttons now surface API error text on failure.
 - Added controller installer script (`installer/install_wiretide.sh`) with dry-run/update flags (tar backup), self-signed TLS, systemd + nginx provisioning; documented usage in `installer/INSTALLER.md`.
+- Fixed nginx template (removed map/connection helper) to avoid config parse errors.
 
 ## 0.0.1 - 2025-12-05
 ### Added

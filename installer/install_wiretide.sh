@@ -126,11 +126,6 @@ fi
 
 # Nginx config
 run bash -c "cat > '$NGINX_CONF' <<EOF
-map \$http_upgrade \$connection_upgrade {
-    default upgrade;
-    ''      close;
-}
-
 server {
     listen 80;
     server_name _;
@@ -158,7 +153,7 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \$connection_upgrade;
+        proxy_set_header Connection \"upgrade\";
         proxy_read_timeout 60s;
     }
 }
