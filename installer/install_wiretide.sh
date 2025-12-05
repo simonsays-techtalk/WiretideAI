@@ -125,7 +125,10 @@ if [[ ! -f "$CERT_PATH" || ! -f "$KEY_PATH" ]]; then
 fi
 
 # Nginx config
-run bash -c "cat > '$NGINX_CONF' <<'EOF'
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  log "[dry-run] writing nginx config to $NGINX_CONF"
+else
+cat > "$NGINX_CONF" <<'EOF'
 server {
     listen 80;
     server_name _;
@@ -160,6 +163,7 @@ server {
     }
 }
 EOF"
+fi
 run ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/wiretide.conf
 run rm -f /etc/nginx/sites-enabled/default
 
