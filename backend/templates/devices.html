@@ -1,0 +1,120 @@
+{% block pagetitle %}Devices{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<main class="page">
+  <header class="hero">
+    <div class="brand">
+      <div class="title">Devices</div>
+      <div class="version">Total: {{ total }}</div>
+    </div>
+    <form class="filters" method="get" action="/devices">
+      <input type="text" name="search" placeholder="Search hostname" value="{{ filters.search or '' }}" />
+      <select name="device_type">
+        <option value="">All types</option>
+        {% for opt in ["router","switch","firewall","access_point","unknown"] %}
+          <option value="{{ opt }}" {% if filters.device_type == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+      <select name="status">
+        <option value="">Any status</option>
+        {% for opt in ["waiting","approved","blocked"] %}
+          <option value="{{ opt }}" {% if filters.status == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Filter</button>
+    </form>
+  </header>
+<section class="table">
+  <div class="table-head">
+    <div>Hostname</div>
+    <div>Type</div>
+    <div>Status</div>
+    <div>SSH</div>
+    <div>Agent</div>
+    <div>Last seen</div>
+    <div>Actions</div>
+  </div>
+  {% for dev in items %}
+  <div class="table-row">
+    <div class="cell"><a class="link" href="/devices/{{ dev.id }}">{{ dev.hostname }}</a></div>
+    <div class="cell badge">{{ dev.device_type }}</div>
+    <div class="cell badge">{{ dev.status }}</div>
+    <div class="cell">{{ "yes" if dev.ssh_enabled else "no" }}</div>
+    <div class="cell">{{ dev.agent_version or "n/a" }}</div>
+    <div class="cell">{{ dev.last_seen or "—" }}</div>
+    <div class="cell actions">
+      <a class="btn small" href="/devices/{{ dev.id }}">View</a>
+      {% if dev.status == "waiting" and dev.device_type != "unknown" and dev.ssh_enabled %}
+      <button class="btn primary small" data-action="approve" data-id="{{ dev.id }}" data-type="{{ dev.device_type }}">Approve</button>
+      {% endif %}
+      {% if dev.status != "blocked" %}
+      <button class="btn warn small" data-action="block" data-id="{{ dev.id }}">Block</button>
+      {% endif %}
+      <button class="btn danger small" data-action="remove" data-id="{{ dev.id }}">Remove</button>
+    </div>
+  </div>
+  {% endfor %}
+  {% if items|length == 0 %}
+  <div class="empty">No devices found for current filters.</div>
+  {% endif %}
+</section>
+  <div class="pager">
+    {% set prev_offset = offset - limit if offset - limit >= 0 else 0 %}
+    {% set next_offset = offset + limit if offset + limit < total else offset %}
+    <a class="pager-btn {% if offset <= 0 %}disabled{% endif %}" href="/devices?offset={{ prev_offset }}&limit={{ limit }}&device_type={{ filters.device_type or '' }}&status={{ filters.status or '' }}&search={{ filters.search or '' }}">Prev</a>
+    <span class="pager-info">Showing {{ offset + 1 if total > 0 else 0 }}–{{ offset + items|length }} of {{ total }}</span>
+    <a class="pager-btn {% if offset + limit >= total %}disabled{% endif %}" href="/devices?offset={{ next_offset }}&limit={{ limit }}&device_type={{ filters.device_type or '' }}&status={{ filters.status or '' }}&search={{ filters.search or '' }}">Next</a>
+  </div>
+</main>
+<script>
+  const table = document.querySelector('.table');
+  const csrfOpts = { credentials: 'include', headers: { 'Content-Type': 'application/json' } };
+
+  table?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    const id = btn.getAttribute('data-id');
+    const dtype = btn.getAttribute('data-type');
+
+    if (action === 'approve') {
+      try {
+        const resp = await fetch('/api/devices/approve', {
+          method: 'POST',
+          ...csrfOpts,
+          body: JSON.stringify({ device_id: Number(id), device_type: dtype }),
+        });
+        if (resp.ok) location.reload();
+        else alert('Approve failed: ' + (await resp.text()));
+      } catch (err) {
+        alert('Approve failed');
+      }
+    }
+    if (action === 'block') {
+      try {
+        const resp = await fetch(`/api/devices/block?device_id=${id}`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (resp.ok) location.reload();
+        else alert('Block failed: ' + (await resp.text()));
+      } catch (err) {
+        alert('Block failed');
+      }
+    }
+    if (action === 'remove') {
+      if (!confirm('Remove device?')) return;
+      try {
+        const resp = await fetch(`/api/devices/${id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (resp.ok) location.reload();
+        else alert('Remove failed: ' + (await resp.text()));
+      } catch (err) {
+        alert('Remove failed');
+      }
+    }
+  });
+</script>
+{% endblock %}

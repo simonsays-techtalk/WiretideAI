@@ -1,0 +1,23 @@
+# Python / venv
+.venv/
+__pycache__/
+*.pyc
+
+# Databases / backups / logs
+*.db
+*.bak*
+*.tar.gz
+*.log
+error.log
+
+# Test cache
+.pytest_cache/
+
+# Node / frontend (if added later)
+node_modules/
+dist/
+build/
+
+# System artifacts
+*.swp
+.DS_Store

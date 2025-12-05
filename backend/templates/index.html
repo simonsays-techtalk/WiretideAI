@@ -1,0 +1,18 @@
+{% block pagetitle %}Home{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<main class="page">
+  <header class="hero">
+    <div class="brand">
+      <div class="title">{{ app_name }}</div>
+      <div class="version">v{{ version }}</div>
+    </div>
+    <p class="tagline">Local, security-first controller for OpenWrt devices.</p>
+  </header>
+  <section class="links">
+    <a class="card" href="/api/devices">Devices API</a>
+    <a class="card" href="/api/settings">Settings API</a>
+    <a class="card" href="/health">Health</a>
+  </section>
+</main>
+{% endblock %}

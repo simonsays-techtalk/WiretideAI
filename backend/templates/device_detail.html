@@ -1,0 +1,157 @@
+{% block pagetitle %}Device Detail{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<main class="page">
+  <header class="hero">
+    <div class="brand">
+      <div class="title">{{ device.hostname }}</div>
+      <div class="version">{{ device.device_type }} · {{ device.status }}</div>
+    </div>
+    <p class="tagline">SSH: {{ "yes" if device.ssh_enabled else "no" }}, Agent: {{ device.agent_version or "n/a" }}</p>
+    <div class="actions">
+      {% if device.status == "waiting" and device.device_type != "unknown" and device.ssh_enabled %}
+      <button class="btn primary" data-action="approve">Approve</button>
+      {% endif %}
+      {% if device.status != "blocked" %}
+      <button class="btn warn" data-action="block">Block</button>
+      {% endif %}
+      <button class="btn danger" data-action="remove">Remove</button>
+    </div>
+  </header>
+  <div class="tabs">
+    <button class="tab active" data-tab="live">Live</button>
+    {% if is_router_like %}
+    <button class="tab" data-tab="firewall">Firewall</button>
+    {% endif %}
+    {% if is_ap_like %}
+    <button class="tab" data-tab="wifi">WiFi</button>
+    {% endif %}
+    <button class="tab" data-tab="clients">Clients</button>
+    <button class="tab" data-tab="logs">Logs</button>
+    <button class="tab" data-tab="advanced">Advanced</button>
+  </div>
+
+  <section class="table tab-panel active" data-tab-panel="live">
+    <div class="table-head"><div>Field</div><div>Value</div></div>
+    <div class="table-row"><div class="cell">Hostname</div><div class="cell">{{ device.hostname }}</div></div>
+    <div class="table-row"><div class="cell">Type</div><div class="cell">{{ device.device_type }}</div></div>
+    <div class="table-row"><div class="cell">Status</div><div class="cell">{{ device.status }}</div></div>
+    <div class="table-row"><div class="cell">Approved</div><div class="cell">{{ device.approved }}</div></div>
+    <div class="table-row"><div class="cell">SSH enabled</div><div class="cell">{{ device.ssh_enabled }}</div></div>
+    <div class="table-row"><div class="cell">Agent version</div><div class="cell">{{ device.agent_version or "n/a" }}</div></div>
+    <div class="table-row"><div class="cell">Last seen</div><div class="cell">{{ device.last_seen or "—" }}</div></div>
+  </section>
+
+  {% if is_router_like %}
+  <section class="table tab-panel" data-tab-panel="firewall">
+    <div class="table-head"><div>Firewall</div><div>Value</div></div>
+    <div class="table-row"><div class="cell">Active profile</div><div class="cell">{{ device.status_row.firewall_profile_active if device.status_row else "—" }}</div></div>
+    <div class="table-row"><div class="cell">Pending</div><div class="cell">Use Approve/Block or queue configs via API</div></div>
+  </section>
+  {% endif %}
+
+  {% if is_ap_like %}
+  <section class="table tab-panel" data-tab-panel="wifi">
+    <div class="table-head"><div>WiFi</div><div>Value</div></div>
+    <div class="table-row"><div class="cell">SSID</div><div class="cell">Manage via queue-config payload</div></div>
+    <div class="table-row"><div class="cell">Roaming</div><div class="cell">Planned</div></div>
+  </section>
+  {% endif %}
+
+  <section class="table tab-panel" data-tab-panel="clients">
+    <div class="table-head"><div>Clients</div><div>Details</div></div>
+    {% if device.status_row and device.status_row.clients %}
+      {% for c in device.status_row.clients %}
+      <div class="table-row"><div class="cell">{{ c.get("hostname") or c.get("mac") or "unknown" }}</div><div class="cell">{{ c }}</div></div>
+      {% endfor %}
+    {% else %}
+      <div class="table-row"><div class="cell" colspan="2">No clients reported.</div></div>
+    {% endif %}
+  </section>
+
+  <section class="table tab-panel" data-tab-panel="logs">
+    <div class="table-head"><div>Logs</div><div>Value</div></div>
+    {% if device.status_row and device.status_row.security_log_samples %}
+      {% for key, val in device.status_row.security_log_samples.items() %}
+      <div class="table-row"><div class="cell">{{ key }}</div><div class="cell"><pre>{{ val }}</pre></div></div>
+      {% endfor %}
+    {% else %}
+      <div class="table-row"><div class="cell" colspan="2">No log samples.</div></div>
+    {% endif %}
+  </section>
+
+  <section class="table tab-panel" data-tab-panel="advanced">
+    <div class="table-head"><div>Raw status</div><div>Value</div></div>
+    <div class="table-row"><div class="cell" colspan="2"><pre>{{ device_json_str }}</pre></div></div>
+  </section>
+</main>
+<script>
+  const deviceId = {{ device.id }};
+  const deviceType = "{{ device.device_type }}";
+  const csrfOpts = { credentials: 'include', headers: { 'Content-Type': 'application/json' } };
+  const btnApprove = document.querySelector('[data-action="approve"]');
+  const btnBlock = document.querySelector('[data-action="block"]');
+  const btnRemove = document.querySelector('[data-action="remove"]');
+
+  btnApprove?.addEventListener('click', async () => {
+    try {
+      const resp = await fetch('/api/devices/approve', {
+        method: 'POST',
+        ...csrfOpts,
+        body: JSON.stringify({ device_id: deviceId, device_type: deviceType }),
+      });
+      if (resp.ok) location.reload();
+      else {
+        const msg = await resp.text();
+        alert('Approve failed: ' + msg);
+      }
+    } catch (e) {
+      alert('Approve failed');
+    }
+  });
+
+  btnBlock?.addEventListener('click', async () => {
+    try {
+      const resp = await fetch(`/api/devices/block?device_id=${deviceId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (resp.ok) location.reload();
+      else {
+        const msg = await resp.text();
+        alert('Block failed: ' + msg);
+      }
+    } catch (e) {
+      alert('Block failed');
+    }
+  });
+
+  btnRemove?.addEventListener('click', async () => {
+    if (!confirm('Remove device? This cannot be undone.')) return;
+    try {
+      const resp = await fetch(`/api/devices/${deviceId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (resp.ok) window.location.href = '/devices';
+      else {
+        const msg = await resp.text();
+        alert('Remove failed: ' + msg);
+      }
+    } catch (e) {
+      alert('Remove failed');
+    }
+  });
+
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach((t) => {
+    t.addEventListener('click', () => {
+      tabs.forEach((x) => x.classList.remove('active'));
+      panels.forEach((p) => p.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelector(`[data-tab-panel="${t.dataset.tab}"]`)?.classList.add('active');
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="page auth">
+  <div class="hero">
+    <div class="brand">
+      <div class="title">Admin Login</div>
+    </div>
+    <p class="tagline">Enter admin token to access UI pages.</p>
+    <form class="filters" method="post" action="/login">
+      <input type="password" name="admin_token" placeholder="Admin token" />
+      <button type="submit">Login</button>
+    </form>
+  </div>
+</main>
+{% endblock %}

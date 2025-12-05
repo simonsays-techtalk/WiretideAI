@@ -1,0 +1,4 @@
+# Upcoming work (WiretideAI)
+- [ ] Add status transition endpoints (block/remove) with validation and audit-friendly responses.
+- [ ] Wire pagination controls in templates and add device detail views (router/AP stubs).
+- [ ] Add minimal UI auth/session placeholder for admin routes.
