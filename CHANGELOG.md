@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - Router/AP tabs rendered conditionally; UI shows admin badge; action buttons now surface API error text on failure.
 - Added controller installer script (`installer/install_wiretide.sh`) with dry-run/update flags (tar backup), self-signed TLS, systemd + nginx provisioning; documented usage in `installer/INSTALLER.md`.
 - Fixed nginx template (removed map/connection helper) to avoid config parse errors.
+- Installer/nginx example updated: add X-Real-IP, proxy_http_version 1.1, and plain Connection upgrade to avoid nginx parse errors.
 
 ## 0.0.1 - 2025-12-05
 ### Added

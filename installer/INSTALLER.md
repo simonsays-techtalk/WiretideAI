@@ -42,6 +42,9 @@ De Wiretide Controller Installer is een geautomatiseerd setup-mechanisme dat een
   sudo installer/install_wiretide.sh --update --cert-cn wiretide.local
   ```
 
+### Notes
+- `/static` wordt via uvicorn geserveerd (vermijdt home-dir permissies); proxy headers ingesteld voor websockets/upgrade.
+
 ### Permissions & TLS
 - Certs: standaard self-signed. Vervang door echte certs in `/etc/ssl/nginx/wiretide.crt|key`.
 - Uvicon draait als user `wiretide`; directories worden ge-owned door `wiretide:wiretide`.
