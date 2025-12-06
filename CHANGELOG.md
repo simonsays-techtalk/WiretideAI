@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Placeholder for upcoming changes.
 - Added a reference OpenWrt agent skeleton script (`agent/agent-skeleton.sh`) illustrating register/status/config/token flows.
+- Expanded agent skeleton with token recovery, logging, status/config stubs, and SHA validation.
+- Documented agent/controller contract and local config/state layout (`agent/CONTRACT.md`); refreshed `.plan` with agent build-out milestones.
+- Hardened agent skeleton: env+config loading, state dir handling, basic SSH detection, HTTP timeouts/retries, token recovery guardrails, canonical JSON hashing (jq if available), safer logging defaults, richer status probes (DNS/NTP/firewall profile, DHCP+WiFi clients), DRY_RUN support, and stub handlers per package type.
+- Added dry-run harness (`agent/dry-run.sh` + `agent/mock_backend.py`) for offline loop testing with a mock controller.
+- Documented config package schemas (firewall/apps/wifi/update), clients payload shape, and dry-run behavior in `agent/CONTRACT.md`.
+- Implemented initial applies: UCI-based firewall profile set + reload, WiFi UCI updates/reload, opkg app installs (adblock/banip), and update script download/execute with configurable commands/paths; all honor DRY_RUN.
 
 ### Fixed
 - Corrected `/api/devices/approve` flow so approval and token rotation complete before config queueing; fixes 500 errors during approval.

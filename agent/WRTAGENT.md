@@ -9,6 +9,7 @@ De Wiretide Agent is een lichtgewicht client voor elk OpenWrt-device dat door de
 - Periodieke statusrapportage (`/status`).
 - Configuratiepull (`/config`).
 - Automatische token recovery (`/token/current`).
+- Skeleton reference: `agent/agent-skeleton.sh` bevat een vereenvoudigd register/status/config/token-loop met logging, token recovery en stubbed apply-handlers (niet productie-klaar).
 - Verwerking van securityprofielen (firewalltemplates).
 - Installatie van apps (adblock, banIP).
 - Lokale SSH-validatie en rapportage (`ssh_enabled`, fingerprint detectie).
