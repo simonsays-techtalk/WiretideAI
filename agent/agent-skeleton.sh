@@ -363,8 +363,20 @@ apply_update_config() {
   ver="$(echo "$json" | jsonfilter -e '@.version' 2>/dev/null || true)"
   [ "$dry_run" = "1" ] && { log "DRY_RUN: skip update apply url=$url version=$ver"; return; }
   [ -z "$url" ] && { log "Update missing url"; return; }
+  if [ -n "$ver" ] && [ -n "$agent_version" ] && [ "$agent_version" = "$ver" ]; then
+    log "Update version $ver matches current; skip"
+    return
+  fi
+  script_sha="$(echo "$json" | jsonfilter -e '@.script_sha256' 2>/dev/null || true)"
   dl_path="$update_script_path"
   sh -c "$download_cmd '$url'" >"$dl_path" 2>/dev/null || { log "download update failed"; return; }
+  if [ -n "$script_sha" ] && command -v sha256sum >/dev/null 2>&1; then
+    calc="$(sha256sum "$dl_path" | awk '{print $1}')"
+    if [ "$calc" != "$script_sha" ]; then
+      log "update sha mismatch expected=$script_sha got=$calc"
+      return
+    fi
+  fi
   chmod +x "$dl_path" || true
   sh "$dl_path" >/dev/null 2>&1 || log "update script failed"
   log "Apply update url=$url version=$ver"

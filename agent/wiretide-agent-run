@@ -1,0 +1,16 @@
+#!/bin/sh
+# Wrapper entrypoint for Wiretide agent (install to /usr/bin/wiretide-agent-run).
+
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+# Allow overriding via /etc/wiretide/agent.conf or env.
+CONFIG_FILE="${CONFIG_FILE:-/etc/wiretide/agent.conf}"
+
+if [ ! -x "$SCRIPT_DIR/agent-skeleton.sh" ]; then
+  echo "agent-skeleton.sh not found/executable in $SCRIPT_DIR" >&2
+  exit 1
+fi
+
+exec sh "$SCRIPT_DIR/agent-skeleton.sh"

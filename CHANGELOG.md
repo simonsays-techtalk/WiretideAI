@@ -11,7 +11,8 @@ All notable changes to this project will be documented in this file.
 - Hardened agent skeleton: env+config loading, state dir handling, basic SSH detection, HTTP timeouts/retries, token recovery guardrails, canonical JSON hashing (jq if available), safer logging defaults, richer status probes (DNS/NTP/firewall profile, DHCP+WiFi clients), DRY_RUN support, and stub handlers per package type.
 - Added dry-run harness (`agent/dry-run.sh` + `agent/mock_backend.py`) for offline loop testing with a mock controller.
 - Documented config package schemas (firewall/apps/wifi/update), clients payload shape, and dry-run behavior in `agent/CONTRACT.md`.
-- Implemented initial applies: UCI-based firewall profile set + reload, WiFi UCI updates/reload, opkg app installs (adblock/banip), and update script download/execute with configurable commands/paths; all honor DRY_RUN.
+- Implemented initial applies: UCI-based firewall profile set + reload, WiFi UCI updates/reload, opkg app installs (adblock/banip), and update script download/execute (version skip, optional SHA) with configurable commands/paths; all honor DRY_RUN.
+- Added OpenWrt packaging artifacts (`agent/wiretide-agent-run`, `agent/init.d/wiretide`) to align with procd service deployment.
 
 ### Fixed
 - Corrected `/api/devices/approve` flow so approval and token rotation complete before config queueing; fixes 500 errors during approval.

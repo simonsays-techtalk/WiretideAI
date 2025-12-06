@@ -9,7 +9,7 @@ De Wiretide Agent is een lichtgewicht client voor elk OpenWrt-device dat door de
 - Periodieke statusrapportage (`/status`).
 - Configuratiepull (`/config`).
 - Automatische token recovery (`/token/current`).
-- Skeleton reference: `agent/agent-skeleton.sh` bevat een vereenvoudigd register/status/config/token-loop met logging, token recovery en stubbed apply-handlers (niet productie-klaar).
+- Skeleton reference: `agent/agent-skeleton.sh` bevat register/status/config/token-loop met logging, token recovery, WiFi/DHCP-clients, apply-handlers en DRY_RUN-ondersteuning (log-only).
 - Verwerking van securityprofielen (firewalltemplates).
 - Installatie van apps (adblock, banIP).
 - Lokale SSH-validatie en rapportage (`ssh_enabled`, fingerprint detectie).
@@ -20,9 +20,10 @@ De Wiretide Agent is een lichtgewicht client voor elk OpenWrt-device dat door de
 ## Technische bouwstenen
 - Shell-script(s) met primair bestand `/usr/bin/wiretide-agent-run`.
 - Busybox utilities: `wget`, `ubus`, `uci`, `ss`, `logread`, `opkg`, `jsonfilter`.
-- Procd init script: `/etc/init.d/wiretide`.
+- Procd init script: `/etc/init.d/wiretide` (zie `agent/init.d/wiretide`); wrapper entrypoint `agent/wiretide-agent-run`.
 - Firewall-profieltemplates: `/etc/wiretide/firewall/...`.
 - Debug logging: `/var/wiretide-debug.log`.
+- Dry-run harness: `agent/dry-run.sh` met `agent/mock_backend.py` voor offline testen.
 - Geen Python of externe dependencies; volledig self-contained.
 
 ## Communicatie met controller
@@ -120,7 +121,7 @@ Indien backend een configuratie retourneert:
 - Inventariseert:
   - ARP-tabel.
   - DHCP leases.
-  - Optioneel `hostapd` CLI output bij AP’s (`iw dev wlan0 station dump`).
+  - WiFi-associaties (`iwinfo assoclist` of `iw dev wlan0 station dump`) met iface/SSID/band.
 - Clientinformatie wordt in JSON doorgegeven via `/status` en voedt UI-clients, securityanalyse en toekomstige roam-optimalisatie.
 
 ## Agent-update module
@@ -129,10 +130,11 @@ Indien backend een configuratie retourneert:
   - `per_device`: alleen specifieke devices mogen updaten.
   - `force_on`: alle devices moeten minimaal een bepaalde versie draaien.
 - Bij update-config package:
-  - Agent downloadt update-script.
-  - Valideert SHA256.
-  - Voert update uit (`/usr/bin/wiretide-agent-update`).
-  - Herstart dienst en meldt nieuwe agentversie via `/status`.
+  - Agent downloadt update-script (`url` in config).
+  - Valideert optioneel `script_sha256`.
+  - Slaat update over als `version` gelijk is aan huidige `agent_version`.
+  - Voert update uit (downloaded script of `/usr/bin/wiretide-agent-update`), respecteert DRY_RUN=1 voor log-only.
+  - Herstart dienst (handmatig/extern) en meldt nieuwe agentversie via `/status`.
 - Voorkomt ongecontroleerde massaupdates.
 
 ## Procd integratie
@@ -147,6 +149,7 @@ Indien backend een configuratie retourneert:
   - `controller_url`
   - `shared_token`
   - `device_id` (na registratie)
+  - `device_type` (hint), `agent_version`, `interval`, `dry_run`
   - Extra velden: wifi-domain membership, roam settings, debuglevel.
 - `/var/wiretide-debug.log` bevat runtime logging, waaronder registratiefouten, config-validatie, installs, firewall reloads en update-flow.
 

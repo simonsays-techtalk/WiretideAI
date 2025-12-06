@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+
+START=95
+STOP=10
+USE_PROCD=1
+
+PROG="/usr/bin/wiretide-agent-run"
+CONFIG="/etc/wiretide/agent.conf"
+
+start_service() {
+  [ -x "$PROG" ] || { echo "wiretide agent missing: $PROG" >&2; return 1; }
+  procd_open_instance
+  procd_set_param command "$PROG"
+  procd_set_param respawn 300 5 5  # 5 failures/5s window, 300s retry
+  procd_set_param file "$CONFIG"
+  procd_close_instance
+}
+
+stop_service() {
+  :
+}

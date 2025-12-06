@@ -1,5 +1,5 @@
 # Upcoming work (WiretideAI)
-- [ ] Harden agent runner: config/state loading, timeouts, token recovery, structured logging, DRY_RUN flag.
-- [ ] Implement register/status payload enrichment (SSH detection, board info, dns/ntp/firewall/clients sampling incl. WiFi associations).
-- [ ] Flesh out config package handlers (firewall/apps/wifi/update) with UCI-safe, idempotent applies and rollback stubs.
-- [ ] Package agent for OpenWrt (procd init, `/usr/bin/wiretide-agent-run`), plus local dry-run harness/tests.
+- [ ] Add backoff/throttling and error counters for offline/controller failure scenarios.
+- [ ] Enrich status payload with board-id/fingerprint details and optional log samples.
+- [ ] Harden update/apply flows (versioning policy, restart signaling) and add minimal rollback hooks.
+- [ ] Finalize packaging guidance (procd enablement, sample agent.conf) and real-device test checklist.

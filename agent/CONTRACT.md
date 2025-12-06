@@ -86,7 +86,7 @@ Packages (current intent):
 - `wiretide.ssid`:
   - `ssid` (string), `password` (string), `band` (e.g., `2g|5g`), `channel`, `htmode`, `country`, `txpower`, optional static IP fields.
 - `wiretide.update`:
-  - `url` (string), `sha256` (string), `version` (string), `policy` (string aligned with controller settings).
+  - `url` (string), `version` (string), `script_sha256` (string, optional), `policy` (string aligned with controller settings).
 
 Agent expectations:
 - Treat `404 No pending config` as normal; do not log noisy errors.
@@ -95,6 +95,8 @@ Agent expectations:
 - Applies must be idempotent; reload services (firewall/wifi) only after successful writes.
 - `DRY_RUN=1` short-circuits apply handlers for offline/dry testing.
 - Configurable commands (env overrides) for reloads and installs: `FIREWALL_RELOAD_CMD`, `WIFI_RELOAD_CMD`, `OPKG_UPDATE_CMD`, `OPKG_INSTALL_CMD`, `DOWNLOAD_CMD`, `UPDATE_SCRIPT_PATH`.
+- Update handler skips when `version` matches the current `agent_version`; if `script_sha256` is provided it is verified after download.
+- Controllers should queue a `wiretide.update` package when shipping a newer agent; agents will apply it once and skip if the `version` matches.
 
 ## Local agent config & state layout
 Config file: `/etc/wiretide/agent.conf` (shell key/value).
