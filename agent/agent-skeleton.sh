@@ -29,6 +29,8 @@ opkg_update_cmd="${OPKG_UPDATE_CMD:-opkg update}"
 opkg_install_cmd="${OPKG_INSTALL_CMD:-opkg install}"
 download_cmd="${DOWNLOAD_CMD:-wget -qO-}"
 update_script_path="${UPDATE_SCRIPT_PATH:-/tmp/wiretide-agent-update.sh}"
+wget_opts="${WGET_OPTS:-}"
+wget_cmd="${WGET_CMD:-}"
 
 log() {
   ts="$(date -Iseconds)"
@@ -58,6 +60,8 @@ load_config() {
   opkg_install_cmd="${OPKG_INSTALL_CMD:-${opkg_install_cmd:-opkg install}}"
   download_cmd="${DOWNLOAD_CMD:-${download_cmd:-wget -qO-}}"
   update_script_path="${UPDATE_SCRIPT_PATH:-${update_script_path:-/tmp/wiretide-agent-update.sh}}"
+  wget_opts="${WGET_OPTS:-${wget_opts:-}}"
+  wget_cmd="${WGET_CMD:-${wget_cmd:-}}"
   device_id_file="$state_dir/device_id"
   mkdir -p "$state_dir"
   [ -f "$device_id_file" ] && device_id="$(cat "$device_id_file" 2>/dev/null || true)"
@@ -82,9 +86,24 @@ save_device_id() {
   echo "$device_id" >"$device_id_file"
 }
 
+pick_wget() {
+  if [ -n "$wget_cmd" ]; then
+    echo "$wget_cmd"; return
+  fi
+  if command -v wget >/dev/null 2>&1; then
+    echo "$(command -v wget)"; return
+  fi
+  if command -v uclient-fetch >/dev/null 2>&1; then
+    echo "$(command -v uclient-fetch)"; return
+  fi
+  echo ""
+}
+
 http_post_json() {
   path="$1"; data="$2"
-  wget -qO- \
+  cmd="$(pick_wget)"
+  [ -z "$cmd" ] && { log "No wget/uclient-fetch available"; return; }
+  "$cmd" $wget_opts -qO- \
     --tries="$http_tries" \
     --timeout="$http_timeout" \
     --header="Content-Type: application/json" \
@@ -95,7 +114,9 @@ http_post_json() {
 
 http_get() {
   path="$1"
-  wget -qO- \
+  cmd="$(pick_wget)"
+  [ -z "$cmd" ] && { log "No wget/uclient-fetch available"; return; }
+  "$cmd" $wget_opts -qO- \
     --tries="$http_tries" \
     --timeout="$http_timeout" \
     --header="X-Shared-Token: $shared_token" \
@@ -104,7 +125,9 @@ http_get() {
 
 http_get_public() {
   path="$1"
-  wget -qO- \
+  cmd="$(pick_wget)"
+  [ -z "$cmd" ] && { log "No wget/uclient-fetch available"; return; }
+  "$cmd" $wget_opts -qO- \
     --tries="$http_tries" \
     --timeout="$http_timeout" \
     "$controller_url/$path" 2>/dev/null || true
