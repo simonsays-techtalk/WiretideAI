@@ -97,6 +97,7 @@ Agent expectations:
 - Configurable commands (env overrides) for reloads and installs: `FIREWALL_RELOAD_CMD`, `WIFI_RELOAD_CMD`, `OPKG_UPDATE_CMD`, `OPKG_INSTALL_CMD`, `DOWNLOAD_CMD`, `UPDATE_SCRIPT_PATH`.
 - Update handler skips when `version` matches the current `agent_version`; if `script_sha256` is provided it is verified after download.
 - Controllers should queue a `wiretide.update` package when shipping a newer agent; agents will apply it once and skip if the `version` matches.
+- HTTP fetchers: agent tries `curl` → `wget` → `uclient-fetch`. TLS opts are honored via env: `CURL_OPTS`/`CURL_CMD`, `WGET_OPTS`/`WGET_CMD`. For self-signed controllers, set `CURL_OPTS="-k"` or `WGET_OPTS="--no-check-certificate"`. Installing `ca-bundle` is preferred where possible.
 
 ## Local agent config & state layout
 Config file: `/etc/wiretide/agent.conf` (shell key/value).
