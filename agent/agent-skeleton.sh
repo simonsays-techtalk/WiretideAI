@@ -127,6 +127,20 @@ handle_auth_errors() {
   return 0
 }
 
+get_hostname_safe() {
+  for cmd in "hostname" "/bin/hostname" "/usr/bin/hostname" "busybox hostname" "/bin/busybox hostname" "/usr/bin/busybox hostname"; do
+    bin="${cmd%% *}"
+    command -v "$bin" >/dev/null 2>&1 || continue
+    name="$(sh -c "$cmd" 2>/dev/null || true)"
+    [ -n "$name" ] && { echo "$name"; return; }
+  done
+  if [ -f /proc/sys/kernel/hostname ]; then
+    name="$(cat /proc/sys/kernel/hostname 2>/dev/null || true)"
+    [ -n "$name" ] && { echo "$name"; return; }
+  fi
+  echo "wiretide-device"
+}
+
 detect_ssh_enabled() {
   # Basic detection: check listeners and binaries.
   if command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -q ':22 '; then
@@ -254,13 +268,7 @@ build_status_payload() {
 register_once() {
   [ -n "$device_id" ] && return 0
   ssh_enabled="$(detect_ssh_enabled)"
-  host="$(
-    hostname 2>/dev/null \
-    || /bin/hostname 2>/dev/null \
-    || /bin/busybox hostname 2>/dev/null \
-    || cat /proc/sys/kernel/hostname 2>/dev/null \
-    || echo "wiretide-device"
-  )"
+  host="$(get_hostname_safe)"
   payload="{\"hostname\":\"$host\",\"device_type\":\"$device_type\",\"ssh_enabled\":$ssh_enabled,\"description\":\"$description\",\"agent_version\":\"$agent_version\"}"
   resp="$(http_post_json "register" "$payload")"
   handle_auth_errors "$resp" || return
