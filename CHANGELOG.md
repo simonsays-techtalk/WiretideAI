@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 ### Added
 - Placeholder for upcoming changes.
+- Added a reference OpenWrt agent skeleton script (`agent/agent-skeleton.sh`) illustrating register/status/config/token flows.
 
 ### Fixed
 - Corrected `/api/devices/approve` flow so approval and token rotation complete before config queueing; fixes 500 errors during approval.
