@@ -254,7 +254,8 @@ build_status_payload() {
 register_once() {
   [ -n "$device_id" ] && return 0
   ssh_enabled="$(detect_ssh_enabled)"
-  payload="{\"hostname\":\"$(hostname)\",\"device_type\":\"$device_type\",\"ssh_enabled\":$ssh_enabled,\"description\":\"$description\",\"agent_version\":\"$agent_version\"}"
+  host="$(hostname 2>/dev/null || /bin/hostname 2>/dev/null || echo "wiretide-device")"
+  payload="{\"hostname\":\"$host\",\"device_type\":\"$device_type\",\"ssh_enabled\":$ssh_enabled,\"description\":\"$description\",\"agent_version\":\"$agent_version\"}"
   resp="$(http_post_json "register" "$payload")"
   handle_auth_errors "$resp" || return
   device_id="$(echo "$resp" | jsonfilter -e '@.device_id' 2>/dev/null || true)"
