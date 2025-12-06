@@ -35,7 +35,7 @@ De Wiretide Controller Installer is een geautomatiseerd setup-mechanisme dat een
   - Maakt `wiretide` user/group, directories (`/opt/wiretide`, `/var/lib/wiretide`, `/etc/wiretide`, `/var/log/wiretide`).
   - Installeert packages (python3, venv, pip, nginx, sqlite3, curl).
   - Copiet backend naar `/opt/wiretide/backend`, zet venv op en installeert requirements.
-  - Schrijft systemd unit (`/etc/systemd/system/wiretide.service`) en start/enable’t uvicorn op 127.0.0.1:9000.
+  - Schrijft systemd unit (`/etc/systemd/system/wiretide.service`) en start/enable’t uvicorn op 127.0.0.1:9000. Admin token default: `wiretide-admin-dev` (pas aan in de unit en herstart de service indien gewenst).
   - Schrijft Nginx config (`/etc/nginx/sites-available/wiretide.conf`), maakt self-signed cert in `/etc/ssl/nginx/`, redirect HTTP→HTTPS en proxy’t naar uvicorn. `/static` gaat via uvicorn om permissie-issues te vermijden.
 - Gebruik (voorbeeld):
   ```bash

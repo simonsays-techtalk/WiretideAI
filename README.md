@@ -23,6 +23,7 @@ uvicorn wiretide.main:app --host 127.0.0.1 --port 9000
 - Flags: `--dry-run`, `--update` (tar backup), `--cert-cn <cn>` (self-signed TLS CN).
 - Tasks: create `wiretide` user, deploy to `/opt/wiretide`, venv, systemd service on 127.0.0.1:9000, Nginx HTTPS proxy with self-signed certs.
 - Example: `sudo installer/install_wiretide.sh --update --cert-cn wiretide.local`
+- Admin token default: `wiretide-admin-dev` (set in systemd unit; adjust and restart service if needed).
 
 ## API/UI highlights
 - Agent endpoints: `/register`, `/status`, `/config`, `/token/current`.
