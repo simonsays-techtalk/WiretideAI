@@ -9,6 +9,7 @@ CONFIG_FILE="${CONFIG_FILE:-/etc/wiretide/agent.conf}"
 state_dir="${STATE_DIR:-/tmp/wiretide}"
 LOG_FILE="${LOG_FILE:-/var/wiretide-debug.log}"
 device_id_file="$state_dir/device_id"
+token_file="$state_dir/shared_token"
 interval="${INTERVAL:-30}"
 http_timeout="${HTTP_TIMEOUT:-10}"
 http_tries="${HTTP_TRIES:-2}"
@@ -67,8 +68,10 @@ load_config() {
   curl_opts="${CURL_OPTS:-${curl_opts:-}}"
   curl_cmd="${CURL_CMD:-${curl_cmd:-}}"
   device_id_file="$state_dir/device_id"
+  token_file="$state_dir/shared_token"
   mkdir -p "$state_dir"
   [ -f "$device_id_file" ] && device_id="$(cat "$device_id_file" 2>/dev/null || true)"
+  [ -f "$token_file" ] && shared_token="$(cat "$token_file" 2>/dev/null || true)"
   controller_host="$(echo "$controller_url" | sed -E 's|https?://||; s|/.*||; s|:.*||')"
 }
 
@@ -88,6 +91,10 @@ require_settings() {
 
 save_device_id() {
   echo "$device_id" >"$device_id_file"
+}
+
+save_shared_token() {
+  echo "$shared_token" >"$token_file"
 }
 
 pick_fetch() {
@@ -207,6 +214,7 @@ recover_token() {
   new_token="$(http_get_public "token/current" | jsonfilter -e '@.shared_token' 2>/dev/null || true)"
   if [ -n "$new_token" ]; then
     shared_token="$new_token"
+    save_shared_token
     log "Recovered shared token"
   else
     log "Token recovery failed"
