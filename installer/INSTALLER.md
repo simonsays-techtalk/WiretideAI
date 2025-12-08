@@ -130,6 +130,7 @@ Installer is idempotent (`install_wiretide.sh`); herhalen is mogelijk zonder dub
   - Werkt static assets bij.
   - Voert systemd restart uit.
   - Behoudt config en DB.
+- Let op: als je vanuit een Git checkout werkt en alleen `update.sh` draait, zorg dat zowel backend-code als templates gesynchroniseerd worden naar de deployment (`/opt/wiretide`) zodat nieuwe routes/HTML (bijv. `/clients`) zichtbaar zijn. Alternatief: richt de systemd-unit zo in dat de WorkingDirectory op de repo wijst en je niet hoeft te rsync’en.
 - Agents worden nooit automatisch doorgedrukt; backend-agent-updateflow blijft optioneel afhankelijk van instellingen.
 
 ### Verwijderen of resetten
