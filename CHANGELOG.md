@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Implemented initial applies: UCI-based firewall profile set + reload, WiFi UCI updates/reload, opkg app installs (adblock/banip), and update script download/execute (version skip, optional SHA) with configurable commands/paths; all honor DRY_RUN.
 - Added OpenWrt packaging artifacts (`agent/wiretide-agent-run`, `agent/init.d/wiretide`) to align with procd service deployment.
 - Agent HTTP fetchers now support curl/wget/uclient with env-based TLS opts (`CURL_OPTS`/`WGET_OPTS`/`*_CMD`); documented in `agent/CONTRACT.md` and `agent/WRTAGENT.md`.
+ - Recovered shared tokens are persisted under `STATE_DIR/shared_token` to avoid repeated `/token/current` recovery loops after rotations.
 
 ### Fixed
 - Corrected `/api/devices/approve` flow so approval and token rotation complete before config queueing; fixes 500 errors during approval.
