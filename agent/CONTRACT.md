@@ -98,6 +98,7 @@ Agent expectations:
 - Update handler skips when `version` matches the current `agent_version`; if `script_sha256` is provided it is verified after download.
 - Controllers should queue a `wiretide.update` package when shipping a newer agent; agents will apply it once and skip if the `version` matches.
 - HTTP fetchers: agent tries `curl` → `wget` → `uclient-fetch`. TLS opts are honored via env: `CURL_OPTS`/`CURL_CMD`, `WGET_OPTS`/`WGET_CMD`. For self-signed controllers, set `CURL_OPTS="-k"` or `WGET_OPTS="--no-check-certificate"`. Installing `ca-bundle` is preferred where possible. Recovered shared tokens are cached under `STATE_DIR/shared_token` and reloaded on startup to avoid repeated `/token/current` calls after rotations.
+- Loop backoff: on consecutive failures the agent increases sleep by `BACKOFF_STEP` seconds up to `BACKOFF_CAP` (defaults 10s/300s) to avoid hammering an unreachable controller.
 
 ## Local agent config & state layout
 Config file: `/etc/wiretide/agent.conf` (shell key/value).

@@ -14,6 +14,8 @@ interval="${INTERVAL:-30}"
 http_timeout="${HTTP_TIMEOUT:-10}"
 http_tries="${HTTP_TRIES:-2}"
 controller_host=""
+backoff_cap="${BACKOFF_CAP:-300}"
+backoff_step="${BACKOFF_STEP:-10}"
 
 controller_url="${CONTROLLER_URL:-}"
 shared_token="${SHARED_TOKEN:-}"
@@ -372,21 +374,24 @@ register_once() {
   host="$(get_hostname_safe)"
   payload="{\"hostname\":\"$host\",\"device_type\":\"$device_type\",\"ssh_enabled\":$ssh_enabled,\"description\":\"$description\",\"agent_version\":\"$agent_version\"}"
   resp="$(http_post_json "register" "$payload")"
-  handle_auth_errors "$resp" || return
+  handle_auth_errors "$resp" || return 1
   device_id="$(echo "$resp" | jsonfilter -e '@.device_id' 2>/dev/null || true)"
   if [ -n "$device_id" ]; then
     save_device_id
     log "Registered device_id=$device_id status=$(echo "$resp" | jsonfilter -e '@.status' 2>/dev/null || true)"
-  else
-    log "Register failed, resp=$resp"
+    return 0
   fi
+  log "Register failed, resp=$resp"
+  return 1
 }
 
 send_status() {
-  [ -z "$device_id" ] && return 0
+  [ -z "$device_id" ] && return 1
   payload="$(build_status_payload)"
   resp="$(http_post_json "status" "$payload")"
-  handle_auth_errors "$resp" || return
+  handle_auth_errors "$resp" || return 1
+  [ -n "$resp" ] || return 1
+  return 0
 }
 
 canonicalize_json() {
@@ -510,12 +515,12 @@ apply_config() {
 }
 
 fetch_config() {
-  [ -z "$device_id" ] && return 0
+  [ -z "$device_id" ] && return 1
   cfg="$(http_get "config?device_id=$device_id")"
-  handle_auth_errors "$cfg" || return
-  echo "$cfg" | grep -q '"detail":"Device not approved"' && { log "Device not approved"; return; }
-  echo "$cfg" | grep -q '"detail":"No pending config"' && return
-  echo "$cfg" | grep -q '"package"' || return
+  handle_auth_errors "$cfg" || return 1
+  echo "$cfg" | grep -q '"detail":"Device not approved"' && { log "Device not approved"; return 0; }
+  echo "$cfg" | grep -q '"detail":"No pending config"' && return 0
+  echo "$cfg" | grep -q '"package"' || return 1
   pkg="$(echo "$cfg" | jsonfilter -e '@.package' 2>/dev/null || true)"
   sha="$(echo "$cfg" | jsonfilter -e '@.sha256' 2>/dev/null || true)"
   body="$(echo "$cfg" | jsonfilter -e '@.package_json' 2>/dev/null || true)"
@@ -529,16 +534,28 @@ fetch_config() {
     fi
   fi
   apply_config "$pkg" "$body"
+  return 0
 }
 
 main_loop() {
+  fail_streak=0
   while true; do
+    iteration_success=0
     load_config
     require_settings
-    register_once
-    send_status
-    fetch_config
-    sleep "$interval"
+    register_once && iteration_success=1 || true
+    send_status && iteration_success=1 || true
+    fetch_config && iteration_success=1 || true
+    if [ "$iteration_success" -eq 1 ]; then
+      fail_streak=0
+      sleep "$interval"
+    else
+      fail_streak=$((fail_streak + 1))
+      sleep_for=$((interval + fail_streak * backoff_step))
+      [ "$sleep_for" -gt "$backoff_cap" ] && sleep_for="$backoff_cap"
+      log "Backoff (fail_streak=$fail_streak) sleeping ${sleep_for}s"
+      sleep "$sleep_for"
+    fi
   done
 }
 
