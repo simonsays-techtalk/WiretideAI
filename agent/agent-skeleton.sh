@@ -99,6 +99,13 @@ save_shared_token() {
   echo "$shared_token" >"$token_file"
 }
 
+lease_info_for_mac() {
+  target_mac="$(echo "$1" | tr 'A-Z' 'a-z')"
+  leases_file="/tmp/dhcp.leases"
+  [ -f "$leases_file" ] || { echo ""; return; }
+  awk -v m="$target_mac" 'tolower($2)==m {print $3" " $4; exit}' "$leases_file"
+}
+
 pick_fetch() {
   if [ -n "$curl_cmd" ] && command -v "$curl_cmd" >/dev/null 2>&1; then
     echo "curl"; return
@@ -324,9 +331,14 @@ sample_wifi_clients() {
       assoc_list="$(iw dev "$iface" station dump 2>/dev/null | awk '/Station/ {print $2}')"
     fi
     for mac in $assoc_list; do
+      lease_info="$(lease_info_for_mac "$mac")"
+      lease_ip="$(echo "$lease_info" | awk '{print $1}')"
+      lease_host="$(echo "$lease_info" | awk '{print $2}')"
       entry="{\"mac\":\"$(json_escape "$mac")\",\"iface\":\"$(json_escape "$iface")\""
       [ -n "$ssid" ] && entry="$entry,\"ssid\":\"$(json_escape "$ssid")\""
       [ -n "$band" ] && entry="$entry,\"band\":\"$band\""
+      [ -n "$lease_ip" ] && entry="$entry,\"ip\":\"$(json_escape "$lease_ip")\""
+      [ -n "$lease_host" ] && entry="$entry,\"host\":\"$(json_escape "$lease_host")\""
       entry="$entry}"
       if [ -z "$wifi_clients" ]; then
         wifi_clients="$entry"

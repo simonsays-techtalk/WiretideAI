@@ -38,6 +38,7 @@ Request JSON (`StatusReport`):
 - `firewall_profile_active` (str, optional)
 - `security_log_samples` (object, optional)
 - `clients` (array of objects, optional; DHCP + WiFi). Fields typically include `ip`, `mac`, `host` for DHCP leases and `mac`, `iface`, `ssid`, `band` for WiFi associations.
+  - WiFi clients are enriched with `ip` and `host` when a matching DHCP lease exists.
 - `ssh_enabled` (bool, optional)
 - `ssh_fingerprint` (str, optional)
 - `agent_version` (str, optional)

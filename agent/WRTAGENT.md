@@ -122,7 +122,7 @@ Indien backend een configuratie retourneert:
 - Inventariseert:
   - ARP-tabel.
   - DHCP leases.
-  - WiFi-associaties (`iwinfo assoclist` of `iw dev wlan0 station dump`) met iface/SSID/band.
+  - WiFi-associaties (`iwinfo assoclist` of `iw dev wlan0 station dump`) met iface/SSID/band; verrijkt met IP/hostname indien lease aanwezig.
 - Clientinformatie wordt in JSON doorgegeven via `/status` en voedt UI-clients, securityanalyse en toekomstige roam-optimalisatie.
 
 ## Agent-update module

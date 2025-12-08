@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Agent HTTP fetchers now support curl/wget/uclient with env-based TLS opts (`CURL_OPTS`/`WGET_OPTS`/`*_CMD`); documented in `agent/CONTRACT.md` and `agent/WRTAGENT.md`.
 - Recovered shared tokens are persisted under `STATE_DIR/shared_token` to avoid repeated `/token/current` recovery loops after rotations.
 - Added simple backoff on consecutive failures (`BACKOFF_STEP`/`BACKOFF_CAP`) to avoid hammering the controller when unreachable; documented in agent guides.
+- WiFi client reports now include IP/hostname when a matching DHCP lease exists; documented in client discovery sections.
 
 ### Fixed
 - Corrected `/api/devices/approve` flow so approval and token rotation complete before config queueing; fixes 500 errors during approval.
