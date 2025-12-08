@@ -477,6 +477,59 @@ def devices_page(
     )
 
 
+@router.get("/clients", response_class=HTMLResponse)
+def clients_page(
+    request: Request,
+    session: Session = Depends(get_session),
+    _: None = Depends(require_admin_token),
+):
+    if not templates:
+        return HTMLResponse(
+            content="Templates not available; ensure Jinja2 is installed.",
+            status_code=501,
+        )
+    devices = session.exec(select(Device)).all()
+    device_map = {d.id: d for d in devices}
+    statuses = session.exec(select(DeviceStatus)).all()
+
+    clients_by_mac = {}
+    for status_row in statuses:
+        if not status_row.clients:
+            continue
+        device = device_map.get(status_row.device_id)
+        for entry in status_row.clients:
+            mac = (entry.get("mac") or "").lower()
+            key = mac or f"row-{status_row.device_id}-{len(clients_by_mac)}"
+            record = {
+                "mac": mac or entry.get("host") or entry.get("hostname") or "unknown",
+                "ip": entry.get("ip"),
+                "host": entry.get("host") or entry.get("hostname"),
+                "connection": "wifi" if entry.get("iface") or entry.get("ssid") else "lan",
+                "ssid": entry.get("ssid"),
+                "band": entry.get("band"),
+                "device_name": device.hostname if device else f"device-{status_row.device_id}",
+                "device_id": status_row.device_id,
+                "updated_at": status_row.updated_at,
+            }
+            existing = clients_by_mac.get(key)
+            if existing and existing.get("updated_at") and status_row.updated_at:
+                if existing["updated_at"] >= status_row.updated_at:
+                    continue
+            clients_by_mac[key] = record
+
+    rows = list(clients_by_mac.values())
+    rows.sort(key=lambda r: (r.get("host") or r.get("mac") or "").lower())
+
+    return templates.TemplateResponse(
+        "clients.html",
+        {
+            "request": request,
+            "clients": rows,
+            "admin_session": True,
+        },
+    )
+
+
 @router.post("/api/devices/approve", response_model=RegisterResponse)
 def approve_device(
     payload: ApproveRequest,

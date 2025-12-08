@@ -26,7 +26,6 @@
     {% if is_ap_like %}
     <button class="tab" data-tab="wifi">WiFi</button>
     {% endif %}
-    <button class="tab" data-tab="clients">Clients</button>
     <button class="tab" data-tab="logs">Logs</button>
     <button class="tab" data-tab="advanced">Advanced</button>
   </div>
@@ -57,17 +56,6 @@
     <div class="table-row"><div class="cell">Roaming</div><div class="cell">Planned</div></div>
   </section>
   {% endif %}
-
-  <section class="table tab-panel" data-tab-panel="clients">
-    <div class="table-head"><div>Clients</div><div>Details</div></div>
-    {% if device.status_row and device.status_row.clients %}
-      {% for c in device.status_row.clients %}
-      <div class="table-row"><div class="cell">{{ c.get("hostname") or c.get("mac") or "unknown" }}</div><div class="cell">{{ c }}</div></div>
-      {% endfor %}
-    {% else %}
-      <div class="table-row"><div class="cell" colspan="2">No clients reported.</div></div>
-    {% endif %}
-  </section>
 
   <section class="table tab-panel" data-tab-panel="logs">
     <div class="table-head"><div>Logs</div><div>Value</div></div>

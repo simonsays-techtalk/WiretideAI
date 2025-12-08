@@ -1,0 +1,37 @@
+{% block pagetitle %}Clients{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<main class="page">
+  <header class="hero">
+    <div class="brand">
+      <div class="title">Clients</div>
+      <div class="version">Unified view across devices</div>
+    </div>
+  </header>
+  <section class="table">
+    <div class="table-head">
+      <div>Name</div>
+      <div>MAC</div>
+      <div>IP</div>
+      <div>Connection</div>
+      <div>Device</div>
+      <div>SSID/Band</div>
+      <div>Last seen</div>
+    </div>
+    {% for c in clients %}
+    <div class="table-row">
+      <div class="cell">{{ c.host or c.mac or "unknown" }}</div>
+      <div class="cell mono">{{ c.mac }}</div>
+      <div class="cell mono">{{ c.ip or "—" }}</div>
+      <div class="cell">{{ c.connection }}</div>
+      <div class="cell"><a class="link" href="/devices/{{ c.device_id }}">{{ c.device_name }}</a></div>
+      <div class="cell">{{ c.ssid or "—" }}{% if c.band %} ({{ c.band }}){% endif %}</div>
+      <div class="cell mono">{{ c.updated_at or "—" }}</div>
+    </div>
+    {% endfor %}
+    {% if not clients %}
+    <div class="table-row"><div class="cell" colspan="7">No clients reported yet.</div></div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
