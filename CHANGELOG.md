@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Installer prompts (or reads env) for admin credentials, writes `/etc/wiretide/admin.env` with the bcrypt hash, and loads it via systemd to avoid hardcoded tokens.
 - Login UX: `/` redirects to the centered `/login` page when unauthenticated; `/logout` now returns to `/login` with a “logged out” notice for clarity.
 - Devices list now shows template metadata and provides inline template selection so admins can pick Router/AP/Switch before approving a waiting device.
+- Initial registration now works without a shared token so the agent can report itself using only the controller IP; approval rotates the token and agents fetch the new value afterward.
 - Added a reference OpenWrt agent skeleton script (`agent/agent-skeleton.sh`) illustrating register/status/config/token flows.
 - Expanded agent skeleton with token recovery, logging, status/config stubs, and SHA validation.
 - Documented agent/controller contract and local config/state layout (`agent/CONTRACT.md`); refreshed `.plan` with agent build-out milestones.

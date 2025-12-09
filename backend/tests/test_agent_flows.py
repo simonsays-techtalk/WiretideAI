@@ -186,6 +186,38 @@ def test_admin_list_settings_and_token_regen():
     assert monitoring.json()["monitoring_api_enabled"] is True
 
 
+def test_pending_registration_and_status_without_token():
+    # Register without shared token (fresh install).
+    reg = client.post(
+        "/register",
+        json={"hostname": "no-token-agent", "ssh_enabled": True},
+    )
+    assert reg.status_code == 200
+    device_id = reg.json()["device_id"]
+
+    # Status can be reported without token while waiting.
+    status_resp = client.post(
+        "/status",
+        json={"device_id": device_id, "ssh_enabled": True},
+    )
+    assert status_resp.status_code == 200
+
+    # Approve using admin token; requires template selection.
+    approve = client.post(
+        "/api/devices/approve",
+        headers={"X-Admin-Token": "test-admin"},
+        json={"device_id": device_id, "device_type": "router"},
+    )
+    assert approve.status_code == 200
+
+    # After approval, status without token must be rejected.
+    status_after = client.post(
+        "/status",
+        json={"device_id": device_id, "ssh_enabled": True},
+    )
+    assert status_after.status_code == 403
+
+
 def test_device_templates_endpoint_and_device_template_metadata():
     templates_resp = client.get(
         "/api/device-templates",

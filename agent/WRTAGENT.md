@@ -100,6 +100,10 @@ Indien backend een configuratie retourneert:
   - Agent slaat nieuwe token op en herprobeert de oorspronkelijke call.
 - Voorkomt problemen bij tokenrotatie en massale foutcondities; minimaliseert handmatig ingrijpen.
 
+### Initiele registratie zonder token
+- De eerste keer dat de agent draait bevat de config alleen de controller-URL. `/register` en `status` draaien zonder token, waardoor de backend het device als `waiting` kan registreren en de admin de template/approval kan starten.
+- Pas nadat de admin het device goedkeurt (en de shared token roteert) krijgt de agent een `403` en haalt hij via `/token/current` het nieuwe token op. Vanaf dat moment gebruiken alle calls het goedgekeurde shared token zoals hierboven beschreven.
+
 ## Firewallprofielen
 - Ondersteunde standaardprofielen: `default`, `strict`, `stealth`, `custom` (door admin beheerd).
 - Bij profielwissel:

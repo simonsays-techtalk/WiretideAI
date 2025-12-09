@@ -77,6 +77,33 @@ def _enforce_transition(current: str, target: str) -> None:
             detail=f"Transition {current} -> {target} not allowed",
         )
 
+
+def _validate_registration_token(session: Session, token: Optional[str]) -> None:
+    if not token:
+        return
+    settings = get_settings_row(session)
+    if token != settings.shared_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid shared token",
+        )
+
+
+def _validate_status_token(session: Session, device: Device, token: Optional[str]) -> None:
+    settings = get_settings_row(session)
+    if token == settings.shared_token:
+        return
+    if token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid shared token",
+        )
+    if device.status != "waiting" or device.approved:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid shared token",
+        )
+
 # Optional templates for basic server-rendered UI.
 try:
     from fastapi.templating import Jinja2Templates
@@ -209,9 +236,10 @@ def _serialize_device(device: Device, status_row: Optional[DeviceStatus]) -> Dev
 @router.post("/register", response_model=RegisterResponse)
 def register_device(
     payload: RegisterRequest,
+    request: Request,
     session: Session = Depends(get_session),
-    _: ControllerSettings = Depends(require_agent_token),
 ) -> RegisterResponse:
+    _validate_registration_token(session, request.headers.get("x-shared-token"))
     if payload.device_type and payload.device_type not in VALID_DEVICE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -268,11 +296,13 @@ def register_device(
 @router.post("/status", response_model=StatusResponse)
 def update_status(
     payload: StatusReport,
+    request: Request,
     session: Session = Depends(get_session),
-    _: ControllerSettings = Depends(require_agent_token),
 ) -> StatusResponse:
-    now = datetime.now(timezone.utc)
+    auth_token = request.headers.get("x-shared-token")
     device = get_device(session, payload.device_id)
+    _validate_status_token(session, device, auth_token)
+    now = datetime.now(timezone.utc)
 
     # Upsert device fields that may change with status.
     if payload.ssh_enabled is not None:
