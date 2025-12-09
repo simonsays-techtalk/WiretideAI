@@ -21,6 +21,14 @@ class Settings(BaseSettings):
         default="wiretide-admin-dev",
         description="Static admin token for UI/admin endpoints; override in production.",
     )
+    admin_username: str = Field(
+        default="admin",
+        description="Admin username (used when admin_password_hash is set).",
+    )
+    admin_password_hash: str | None = Field(
+        default=None,
+        description="Bcrypt hash for admin password. When set, admin_token is ignored for login.",
+    )
     admin_cookie_name: str = Field(
         default="wiretide_admin",
         description="Cookie name for admin session token.",

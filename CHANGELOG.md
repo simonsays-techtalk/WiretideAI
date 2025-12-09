@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 ### Added
 - Placeholder for upcoming changes.
+- Admin auth now supports username/password with bcrypt hashing, Basic-auth headers, and signed session cookies (UI login adapts automatically; legacy admin token remains available when no password hash is set).
+- Installer prompts (or reads env) for admin credentials, writes `/etc/wiretide/admin.env` with the bcrypt hash, and loads it via systemd to avoid hardcoded tokens.
 - Added a reference OpenWrt agent skeleton script (`agent/agent-skeleton.sh`) illustrating register/status/config/token flows.
 - Expanded agent skeleton with token recovery, logging, status/config stubs, and SHA validation.
 - Documented agent/controller contract and local config/state layout (`agent/CONTRACT.md`); refreshed `.plan` with agent build-out milestones.

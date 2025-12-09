@@ -14,6 +14,11 @@ from sqlmodel import Session, select
 from .config import get_settings
 from .db import get_session
 from .models import ControllerSettings, Device, DeviceConfig, DeviceStatus
+from .auth import (
+    parse_basic_credentials,
+    validate_session_token,
+    verify_password,
+)
 from .schemas import (
     ApproveRequest,
     ClearConfigRequest,
@@ -102,9 +107,32 @@ def require_agent_token(
 
 def require_admin_token(
     x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
     request: Request = None,
 ) -> None:
     settings = get_settings()
+    if settings.admin_password_hash:
+        password_hash = settings.admin_password_hash
+        header_token = x_admin_token or authorization
+        cookie_token = request.cookies.get(settings.admin_cookie_name) if request else None
+
+        def _valid_session(token: Optional[str]) -> bool:
+            if not token:
+                return False
+            return validate_session_token(token, settings.admin_username, password_hash)
+
+        if header_token:
+            creds = parse_basic_credentials(header_token)
+            if creds and creds[0] == settings.admin_username and verify_password(creds[1], password_hash):
+                return
+            if _valid_session(header_token):
+                return
+        if _valid_session(cookie_token):
+            return
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing admin credentials",
+        )
     if settings.admin_token is None:
         return
     cookie_token = request.cookies.get(settings.admin_cookie_name) if request else None

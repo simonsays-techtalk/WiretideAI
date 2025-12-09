@@ -35,7 +35,7 @@ De Wiretide Controller Installer is een geautomatiseerd setup-mechanisme dat een
   - Maakt `wiretide` user/group, directories (`/opt/wiretide`, `/var/lib/wiretide`, `/etc/wiretide`, `/var/log/wiretide`).
   - Installeert packages (python3, venv, pip, nginx, sqlite3, curl).
   - Copiet backend naar `/opt/wiretide/backend`, zet venv op en installeert requirements.
-  - Schrijft systemd unit (`/etc/systemd/system/wiretide.service`) en start/enable’t uvicorn op 127.0.0.1:9000. Admin token default: `wiretide-admin-dev` (pas aan in de unit en herstart de service indien gewenst).
+  - Vraagt admin username/password (stdin of via `WIRETIDE_ADMIN_USERNAME`/`WIRETIDE_ADMIN_PASSWORD`), schrijft bcrypt-hash naar `/etc/wiretide/admin.env` en laadt die in de systemd unit (`/etc/systemd/system/wiretide.service`). Login gebruikt Basic-auth of de UI-loginpagina; legacy token werkt alleen nog als er geen password hash is gezet.
   - Schrijft Nginx config (`/etc/nginx/sites-available/wiretide.conf`), maakt self-signed cert in `/etc/ssl/nginx/`, redirect HTTP→HTTPS en proxy’t naar uvicorn. `/static` gaat via uvicorn om permissie-issues te vermijden.
 - Gebruik (voorbeeld):
   ```bash
@@ -48,6 +48,7 @@ De Wiretide Controller Installer is een geautomatiseerd setup-mechanisme dat een
 ### Permissions & TLS
 - Certs: standaard self-signed. Vervang door echte certs in `/etc/ssl/nginx/wiretide.crt|key`.
 - Uvicon draait als user `wiretide`; directories worden ge-owned door `wiretide:wiretide`.
+- Admin hash staat in `/etc/wiretide/admin.env` (0600, root); systemd laadt dit via `EnvironmentFile`.
 - Admin cookie `secure=true` in systemd unit (Nginx/TLS verwacht).
 
 Installer is idempotent (`install_wiretide.sh`); herhalen is mogelijk zonder dubbele configuraties en maakt upgrades eenvoudig.

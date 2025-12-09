@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlmodel import Session, select
 
 try:
     from fastapi.templating import Jinja2Templates
@@ -22,12 +23,12 @@ try:
     MULTIPART_AVAILABLE = True
 except Exception:  # pragma: no cover
     MULTIPART_AVAILABLE = False
-from sqlmodel import Session, select
 
 from .config import get_settings
 from .db import get_session, init_db, session_scope
 from .routes import router
 from .services import ensure_settings_seeded
+from .auth import SESSION_TTL_SECONDS, issue_session_token, verify_password
 
 
 settings = get_settings()
@@ -71,7 +72,14 @@ def index(request: Request) -> Any:
 def login_page(request: Request) -> Any:
     if not templates:
         return HTMLResponse(content="Templates not available; ensure Jinja2 is installed.", status_code=501)
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "use_password": bool(settings.admin_password_hash),
+            "admin_username": settings.admin_username,
+        },
+    )
 
 
 @app.get("/logout")
@@ -83,17 +91,31 @@ def logout_admin() -> Any:
 
 if MULTIPART_AVAILABLE:
     @app.post("/login")
-    def login_admin(admin_token: str = Form(...)) -> Any:
-        if admin_token != settings.admin_token:
-            return HTMLResponse(content="Invalid admin token", status_code=401)
+    def login_admin(
+        admin_username: str = Form(default=None),
+        admin_password: str = Form(default=None),
+        admin_token: str = Form(default=None),
+    ) -> Any:
+        if settings.admin_password_hash:
+            if not admin_username or not admin_password:
+                return HTMLResponse(content="Missing credentials", status_code=400)
+            if admin_username != settings.admin_username or not verify_password(
+                admin_password, settings.admin_password_hash
+            ):
+                return HTMLResponse(content="Invalid admin credentials", status_code=401)
+            cookie_value = issue_session_token(settings.admin_username, settings.admin_password_hash)
+        else:
+            if not admin_token or admin_token != settings.admin_token:
+                return HTMLResponse(content="Invalid admin token", status_code=401)
+            cookie_value = admin_token
         response = RedirectResponse(url="/devices", status_code=303)
         response.set_cookie(
             key=settings.admin_cookie_name,
-            value=admin_token,
+            value=cookie_value,
             httponly=True,
             samesite="lax",
             secure=settings.admin_cookie_secure,
-            max_age=60 * 60 * 4,
+            max_age=SESSION_TTL_SECONDS,
         )
         return response
 else:

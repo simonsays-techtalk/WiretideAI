@@ -56,6 +56,8 @@ CERT_PATH="$CERT_DIR/wiretide.crt"
 KEY_PATH="$CERT_DIR/wiretide.key"
 WIRETIDE_USER="wiretide"
 WIRETIDE_GROUP="wiretide"
+ADMIN_ENV_FILE="$CONFIG_DIR/admin.env"
+DEFAULT_ADMIN_USERNAME="admin"
 
 log "Starting Wiretide installer (dry-run=$DRY_RUN, update=$DO_UPDATE)"
 
@@ -96,6 +98,48 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
   run "$VENV_DIR/bin/pip" install -r "$APP_DIR/backend/requirements.txt"
 fi
 
+# Admin credentials (username/password -> bcrypt hash)
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  log "[dry-run] skipping admin credential prompt (would write $ADMIN_ENV_FILE)"
+elif [[ -f "$ADMIN_ENV_FILE" ]]; then
+  log "Admin credentials already present at $ADMIN_ENV_FILE; reusing."
+else
+  ADMIN_USERNAME="${WIRETIDE_ADMIN_USERNAME:-$DEFAULT_ADMIN_USERNAME}"
+  if [[ -t 0 && -z "${WIRETIDE_ADMIN_USERNAME:-}" ]]; then
+    read -rp "Admin username [$DEFAULT_ADMIN_USERNAME]: " INPUT_ADMIN_USERNAME
+    ADMIN_USERNAME="${INPUT_ADMIN_USERNAME:-$DEFAULT_ADMIN_USERNAME}"
+  fi
+  if [[ -z "${WIRETIDE_ADMIN_PASSWORD:-}" ]]; then
+    if [[ ! -t 0 ]]; then
+      echo "WIRETIDE_ADMIN_PASSWORD not set and no TTY available for prompt." >&2
+      exit 1
+    fi
+    read -rsp "Admin password: " ADMIN_PASSWORD
+    echo
+    read -rsp "Confirm admin password: " ADMIN_PASSWORD_CONFIRM
+    echo
+    if [[ "$ADMIN_PASSWORD" != "${ADMIN_PASSWORD_CONFIRM:-}" ]]; then
+      echo "Passwords do not match." >&2
+      exit 1
+    fi
+  else
+    ADMIN_PASSWORD="${WIRETIDE_ADMIN_PASSWORD}"
+  fi
+
+  ADMIN_PASSWORD_HASH="$(ADMIN_PASSWORD="$ADMIN_PASSWORD" "$VENV_DIR/bin/python" - <<'PY'
+import os
+import bcrypt
+
+password = os.environ["ADMIN_PASSWORD"].encode("utf-8")
+print(bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf-8"))
+PY
+)"
+  unset ADMIN_PASSWORD ADMIN_PASSWORD_CONFIRM
+
+  run bash -c "umask 077 && printf '%s\n' 'WIRETIDE_ADMIN_USERNAME=${ADMIN_USERNAME}' 'WIRETIDE_ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}' 'WIRETIDE_ADMIN_TOKEN=' > '$ADMIN_ENV_FILE'"
+  run chown root:root "$ADMIN_ENV_FILE"
+fi
+
 # Systemd service
 run bash -c "cat > '$SYSTEMD_UNIT' <<'EOF'
 [Unit]
@@ -108,8 +152,8 @@ Group=wiretide
 WorkingDirectory=$APP_DIR/backend
 ExecStart=$VENV_DIR/bin/uvicorn wiretide.main:app --host 127.0.0.1 --port 9000 --workers 2
 Restart=always
+EnvironmentFile=-$ADMIN_ENV_FILE
 Environment=WIRETIDE_DATABASE_URL=sqlite:///$DATA_DIR/wiretide.db
-Environment=WIRETIDE_ADMIN_TOKEN=wiretide-admin-dev
 Environment=WIRETIDE_ADMIN_COOKIE_SECURE=true
 
 [Install]

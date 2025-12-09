@@ -15,15 +15,15 @@ python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 uvicorn wiretide.main:app --host 127.0.0.1 --port 9000
 ```
-- Admin token defaults to `wiretide-admin-dev`; set `WIRETIDE_ADMIN_TOKEN` and `WIRETIDE_ADMIN_COOKIE_SECURE=true` for HTTPS.
+- Admin auth: for quick dev keep the legacy token (`WIRETIDE_ADMIN_TOKEN`, default `wiretide-admin-dev`); for password auth set `WIRETIDE_ADMIN_USERNAME` + `WIRETIDE_ADMIN_PASSWORD_HASH` (bcrypt) and log in via Basic auth or `/login`.
 - Static/templates served by FastAPI; Nginx proxy recommended for HTTPS.
 
 ## Installer (prod/test)
 - Script: `installer/install_wiretide.sh`
 - Flags: `--dry-run`, `--update` (tar backup), `--cert-cn <cn>` (self-signed TLS CN).
-- Tasks: create `wiretide` user, deploy to `/opt/wiretide`, venv, systemd service on 127.0.0.1:9000, Nginx HTTPS proxy with self-signed certs.
+- Tasks: create `wiretide` user, deploy to `/opt/wiretide`, venv, prompt/env-driven admin username+password (bcrypt hash stored in `/etc/wiretide/admin.env` and loaded by systemd), systemd service on 127.0.0.1:9000, Nginx HTTPS proxy with self-signed certs.
 - Example: `sudo installer/install_wiretide.sh --update --cert-cn wiretide.local`
-- Admin token default: `wiretide-admin-dev` (set in systemd unit; adjust and restart service if needed).
+- Login: use Basic auth with the credentials provided during install (legacy admin token only if no password hash is configured).
 
 ## API/UI highlights
 - Agent endpoints: `/register`, `/status`, `/config`, `/token/current`.
