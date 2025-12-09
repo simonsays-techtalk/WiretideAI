@@ -18,6 +18,7 @@ from .auth import (
     parse_basic_credentials,
     validate_session_token,
     verify_password,
+    hash_password,
 )
 from .schemas import (
     ApproveRequest,
@@ -35,6 +36,7 @@ from .schemas import (
     TokenResponse,
     UpdatePolicyRequest,
     MonitoringToggleRequest,
+    ChangePasswordRequest,
 )
 from .services import (
     ensure_settings_seeded,
@@ -111,8 +113,8 @@ def require_admin_token(
     request: Request = None,
 ) -> None:
     settings = get_settings()
-    if settings.admin_password_hash:
-        password_hash = settings.admin_password_hash
+    password_hash = settings.admin_password_hash
+    if password_hash:
         header_token = x_admin_token or authorization
         cookie_token = request.cookies.get(settings.admin_cookie_name) if request else None
 
@@ -141,6 +143,28 @@ def require_admin_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin token",
+        )
+
+def _persist_admin_hash(new_hash: str, settings) -> None:
+    """Attempt to persist the new admin hash to the env file if writable."""
+    if not settings.admin_env_path:
+        return
+    env_path = Path(settings.admin_env_path)
+    try:
+        env_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = env_path.with_suffix(".tmp")
+        content = (
+            f"WIRETIDE_ADMIN_USERNAME={settings.admin_username}\n"
+            f"WIRETIDE_ADMIN_PASSWORD_HASH={new_hash}\n"
+            "WIRETIDE_ADMIN_TOKEN=\n"
+        )
+        tmp_path.write_text(content)
+        tmp_path.chmod(0o600)
+        tmp_path.replace(env_path)
+    except Exception as exc:  # pragma: no cover - best-effort persistence
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to persist new password hash: {exc}",
         )
 
 
@@ -334,6 +358,7 @@ def toggle_monitoring(
         agent_update_url=settings.agent_update_url,
         agent_min_version=settings.agent_min_version,
         monitoring_api_enabled=settings.monitoring_api_enabled,
+        admin_username=get_settings().admin_username,
     )
 
 
@@ -349,6 +374,7 @@ def get_settings_view(
         agent_update_url=settings.agent_update_url,
         agent_min_version=settings.agent_min_version,
         monitoring_api_enabled=settings.monitoring_api_enabled,
+        admin_username=get_settings().admin_username,
     )
 
 
@@ -385,6 +411,7 @@ def update_agent_policy(
         agent_update_url=settings.agent_update_url,
         agent_min_version=settings.agent_min_version,
         monitoring_api_enabled=settings.monitoring_api_enabled,
+        admin_username=get_settings().admin_username,
     )
 
 
@@ -501,6 +528,8 @@ def devices_page(
             "offset": offset,
             "filters": {"device_type": device_type, "status": status, "search": search},
             "admin_session": True,
+            "admin_username": get_settings().admin_username,
+            "admin_has_password": bool(get_settings().admin_password_hash),
         },
     )
 
@@ -554,6 +583,8 @@ def clients_page(
             "request": request,
             "clients": rows,
             "admin_session": True,
+            "admin_username": get_settings().admin_username,
+            "admin_has_password": bool(get_settings().admin_password_hash),
         },
     )
 
@@ -689,6 +720,37 @@ def clear_configs(
     session.exec(delete(DeviceConfig).where(DeviceConfig.device_id == payload.device_id))
     session.commit()
     return {"deleted": len(deleted)}
+
+
+@router.post("/api/admin/password-change")
+def change_admin_password(
+    payload: ChangePasswordRequest,
+    request: Request,
+    _: None = Depends(require_admin_token),
+) -> dict:
+    settings = get_settings()
+    if not settings.admin_password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password auth not enabled; set WIRETIDE_ADMIN_PASSWORD_HASH to use this endpoint.",
+        )
+    if not verify_password(payload.current_password, settings.admin_password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+    if len(payload.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 8 characters",
+        )
+    new_hash = hash_password(payload.new_password)
+    # Update in-memory settings so the new password is effective immediately.
+    settings.admin_password_hash = new_hash
+
+    # Attempt to persist to env file when possible.
+    _persist_admin_hash(new_hash, settings)
+    return {"status": "ok"}
 @router.get("/devices/{device_id}", response_class=HTMLResponse)
 def device_detail_page(
     request: Request,
@@ -722,5 +784,7 @@ def device_detail_page(
             "admin_session": True,
             "is_router_like": is_router_like,
             "is_ap_like": is_ap_like,
+            "admin_username": get_settings().admin_username,
+            "admin_has_password": bool(get_settings().admin_password_hash),
         },
     )

@@ -28,7 +28,7 @@ from .config import get_settings
 from .db import get_session, init_db, session_scope
 from .routes import router
 from .services import ensure_settings_seeded
-from .auth import SESSION_TTL_SECONDS, issue_session_token, verify_password
+from .auth import SESSION_TTL_SECONDS, issue_session_token, verify_password, validate_session_token
 
 
 settings = get_settings()
@@ -40,6 +40,11 @@ templates = (
     if Jinja2Templates and jinja2 is not None
     else None
 )
+if templates:
+    templates.env.globals.update(
+        default_admin_username=settings.admin_username,
+        default_admin_has_password=bool(settings.admin_password_hash),
+    )
 
 
 @asynccontextmanager
@@ -57,15 +62,24 @@ app.include_router(router)
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> Any:
-    if templates:
-        return templates.TemplateResponse(
-            "index.html",
-            {"request": request, "app_name": settings.app_name, "version": settings.version},
-    )
-    return HTMLResponse(
-        content=f"{settings.app_name} v{settings.version}",
-        status_code=200,
-    )
+    cookie_token = request.cookies.get(settings.admin_cookie_name)
+    is_logged_in = False
+    if settings.admin_password_hash and cookie_token:
+        is_logged_in = validate_session_token(
+            cookie_token, settings.admin_username, settings.admin_password_hash
+        )
+    elif cookie_token and not settings.admin_password_hash:
+        is_logged_in = cookie_token == settings.admin_token
+
+    if not templates:
+        return HTMLResponse(
+            content=f"{settings.app_name} v{settings.version}",
+            status_code=200,
+        )
+
+    if is_logged_in:
+        return RedirectResponse(url="/devices", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -78,13 +92,16 @@ def login_page(request: Request) -> Any:
             "request": request,
             "use_password": bool(settings.admin_password_hash),
             "admin_username": settings.admin_username,
+            "auth_page": True,
+            "logged_out": request.query_params.get("logged_out") == "1",
+            "admin_has_password": bool(settings.admin_password_hash),
         },
     )
 
 
 @app.get("/logout")
 def logout_admin() -> Any:
-    response = RedirectResponse(url="/login", status_code=303)
+    response = RedirectResponse(url="/login?logged_out=1", status_code=303)
     response.delete_cookie(settings.admin_cookie_name)
     return response
 

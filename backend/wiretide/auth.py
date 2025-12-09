@@ -11,6 +11,11 @@ import bcrypt
 SESSION_TTL_SECONDS = 60 * 60 * 4
 
 
+def hash_password(password: str) -> str:
+    """Generate a bcrypt hash for a plaintext password."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
 def verify_password(password: str, password_hash: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
     try:

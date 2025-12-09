@@ -110,6 +110,7 @@ class SettingsResponse(BaseModel):
     agent_update_url: Optional[str] = None
     agent_min_version: Optional[str] = None
     monitoring_api_enabled: bool
+    admin_username: Optional[str] = None
 
 
 class UpdatePolicyRequest(BaseModel):
@@ -120,6 +121,11 @@ class UpdatePolicyRequest(BaseModel):
 
 class MonitoringToggleRequest(BaseModel):
     monitoring_api_enabled: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class ClearConfigRequest(BaseModel):

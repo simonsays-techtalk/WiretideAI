@@ -29,6 +29,10 @@ class Settings(BaseSettings):
         default=None,
         description="Bcrypt hash for admin password. When set, admin_token is ignored for login.",
     )
+    admin_env_path: str = Field(
+        default="/etc/wiretide/admin.env",
+        description="Path to admin env file (used for password changes when writable).",
+    )
     admin_cookie_name: str = Field(
         default="wiretide_admin",
         description="Cookie name for admin session token.",

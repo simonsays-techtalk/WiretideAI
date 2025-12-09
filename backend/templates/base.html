@@ -6,63 +6,114 @@
     <title>{{ title if title else "Wiretide" }}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}" />
   </head>
-  <body>
-    <div class="shell">
-      <aside class="sidebar">
-        <div class="logo">Wiretide</div>
-        <nav>
-          <a href="/" class="nav-link">Home</a>
-          <a href="/api/devices" class="nav-link">Devices API</a>
-          <a href="/api/settings" class="nav-link">Settings API</a>
-          <a href="/devices" class="nav-link">Devices UI</a>
-          <a href="/clients" class="nav-link">Clients</a>
-        </nav>
-      </aside>
-      <main class="content">
-        <div class="topbar">
-          <div class="breadcrumbs">
-            <a href="/" class="link">Home</a>
-            <span class="crumb-sep">/</span>
-            <span class="crumb-current">{% block pagetitle %}Dashboard{% endblock %}</span>
-          </div>
-          <div class="user-menu">
-            {% if admin_session %}
-            <span class="badge admin-pill">Admin</span>
-            {% endif %}
-            <button class="user-btn" id="userMenuBtn">User ▾</button>
-            <div class="user-dropdown" id="userDropdown">
-              <button type="button" id="themeToggle">Toggle Theme</button>
-              <a href="#" class="dropdown-link disabled">Change password</a>
-              <a href="/logout" class="dropdown-link">Logout</a>
+  <body class="{% if auth_page %}auth-body{% endif %}">
+    {% if auth_page %}
+      {% set wrapper_start %}
+      <main class="auth-shell">
+      {% endset %}
+      {% set wrapper_end %}
+      </main>
+      {% endset %}
+    {% else %}
+      {% set wrapper_start %}
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="logo">Wiretide</div>
+          <nav>
+            <a href="/" class="nav-link">Home</a>
+            <a href="/api/devices" class="nav-link">Devices API</a>
+            <a href="/api/settings" class="nav-link">Settings API</a>
+            <a href="/devices" class="nav-link">Devices UI</a>
+            <a href="/clients" class="nav-link">Clients</a>
+          </nav>
+        </aside>
+        <main class="content">
+          <div class="topbar">
+            <div class="breadcrumbs">
+              <a href="/" class="link">Home</a>
+              <span class="crumb-sep">/</span>
+              <span class="crumb-current">{% block pagetitle %}Dashboard{% endblock %}</span>
+            </div>
+            <div class="user-menu">
+              <button class="user-btn" id="userMenuBtn">{{ admin_username or default_admin_username or "User" }} ▾</button>
+              <div class="user-dropdown" id="userDropdown">
+                <button type="button" id="themeToggle">Toggle Theme</button>
+                <button type="button" class="dropdown-link{% if not (admin_has_password or default_admin_has_password) %} disabled{% endif %}" id="changePasswordBtn" data-enabled="{{ 1 if (admin_has_password or default_admin_has_password) else 0 }}">Change password</button>
+                <a href="/logout" class="dropdown-link">Logout</a>
+              </div>
             </div>
           </div>
-        </div>
-        {% block content %}{% endblock %}
-      </main>
-    </div>
-    <script>
-      const dropdown = document.getElementById('userDropdown');
-      const btn = document.getElementById('userMenuBtn');
-      const themeToggle = document.getElementById('themeToggle');
-      const applyTheme = (t) => {
-        document.documentElement.setAttribute('data-theme', t);
-        localStorage.setItem('wiretide-theme', t);
-      };
-      const savedTheme = localStorage.getItem('wiretide-theme') || 'dark';
-      applyTheme(savedTheme);
+      {% endset %}
+      {% set wrapper_end %}
+        </main>
+      </div>
+      {% endset %}
+    {% endif %}
 
-      btn?.addEventListener('click', () => {
-        dropdown?.classList.toggle('open');
-      });
-      document.addEventListener('click', (e) => {
-        if (!dropdown?.contains(e.target) && e.target !== btn) {
-          dropdown?.classList.remove('open');
-        }
-      });
-      themeToggle?.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme') || 'dark';
-        applyTheme(current === 'dark' ? 'light' : 'dark');
-      });
+    {{ wrapper_start | default('') | safe }}
+    {% block content %}{% endblock %}
+    {{ wrapper_end | default('') | safe }}
+    <script>
+      (function () {
+        const dropdown = document.getElementById('userDropdown');
+        const btn = document.getElementById('userMenuBtn');
+        const themeToggle = document.getElementById('themeToggle');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        const applyTheme = (t) => {
+          document.documentElement.setAttribute('data-theme', t);
+          localStorage.setItem('wiretide-theme', t);
+        };
+        const savedTheme = localStorage.getItem('wiretide-theme') || 'dark';
+        applyTheme(savedTheme);
+
+        btn?.addEventListener('click', () => {
+          dropdown?.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+          if (!dropdown?.contains(e.target) && e.target !== btn) {
+            dropdown?.classList.remove('open');
+          }
+        });
+        themeToggle?.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme') || 'dark';
+          applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+        changePasswordBtn?.addEventListener('click', async () => {
+          if (changePasswordBtn.dataset.enabled !== '1') {
+            alert('Password auth is not enabled on this instance.');
+            return;
+          }
+          const currentPassword = prompt('Current password');
+          if (currentPassword === null) return;
+          const newPassword = prompt('New password (min 8 chars)');
+          if (newPassword === null) return;
+          if (newPassword.length < 8) {
+            alert('Password must be at least 8 characters.');
+            return;
+          }
+          const confirm = prompt('Confirm new password');
+          if (confirm === null) return;
+          if (confirm !== newPassword) {
+            alert('Passwords do not match.');
+            return;
+          }
+          try {
+            const resp = await fetch('/api/admin/password-change', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+            });
+            if (!resp.ok) {
+              const text = await resp.text();
+              throw new Error(text || `Error ${resp.status}`);
+            }
+            alert('Password updated. Please log in again with the new password.');
+            window.location.href = '/logout';
+          } catch (err) {
+            alert(`Failed to change password: ${err}`);
+          }
+        });
+      })();
     </script>
   </body>
 </html>

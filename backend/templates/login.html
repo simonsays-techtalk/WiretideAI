@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
-<main class="page auth">
-  <div class="hero">
+<section class="page auth-page">
+  <div class="hero auth-card">
     <div class="brand">
       <div class="title">Admin Login</div>
     </div>
+    {% if logged_out %}
+      <div class="notice success">You have been logged out.</div>
+    {% endif %}
     {% if use_password %}
       <p class="tagline">Sign in with your admin username and password.</p>
       <form class="filters" method="post" action="/login">
-        <input type="text" name="admin_username" placeholder="Admin username" value="{{ admin_username }}" />
+        <input type="text" name="admin_username" placeholder="Admin username" value="{{ admin_username }}" autocomplete="username" />
         <input type="password" name="admin_password" placeholder="Password" autocomplete="current-password" />
         <button type="submit">Login</button>
       </form>
@@ -20,5 +23,5 @@
       </form>
     {% endif %}
   </div>
-</main>
+</section>
 {% endblock %}
