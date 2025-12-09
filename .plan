@@ -1,5 +1,29 @@
-# Upcoming work (WiretideAI)
-- [ ] Add backoff/throttling and error counters for offline/controller failure scenarios.
-- [ ] Enrich status payload with board-id/fingerprint details and optional log samples.
-- [ ] Harden update/apply flows (versioning policy, restart signaling) and add minimal rollback hooks.
-- [ ] Finalize packaging guidance (procd enablement, sample agent.conf) and real-device test checklist.
+V1 Roadmap – Polished Wiretide Installer + Backend + UI + Agent
+
+Goal: Deliver a fully local, security-first Wiretide stack that installs cleanly, links a backend/UI with an agent, and exposes a guided device-approval workflow.
+
+Milestone 1 – Installer polish
+  • Embed controller IP/URL into agent installer artifacts during server install so agents auto-point to the right backend.
+  • Add an “agent installer download” hook (curl/wget) on the controller that serves a signed/embed script.
+  • Harden installer prompts/documentation (admin auth setup, TLS, service readiness) to keep onboarding smooth.
+
+Milestone 2 – Backend + approval flow
+  • Ensure controller APIs can accept new agents reporting with device_type “unknown,” persist metadata, and surface them in the UI.
+  • Build a guided approval workflow for admins to pick a device template (Router/Access Point/Switch) and generate the right config template.
+  • Update token/session handling if needed for the new flow, including verifying agent origin via embedded controller URL.
+  • Document agent reporting expectations (shared token, approval -> template, mandatory metadata/SSH status).
+
+Milestone 3 – UI refinements
+  • Surface the new approval workflow in the UI (list waiting devices, allow device-type selection, show template-specific tabs).
+  • Improve login/admin UX continuity (embedding login state, logout redirect, dynamic topbar, theme toggle).
+  • Add agent install/download section explaining how to download/run the embedded installer.
+
+Milestone 4 – Agent experience
+  • Agent installer uses embedded controller URL/IP from server install; download via provided curl/wget command.
+  • After installation, agent automatically registers with controller and keeps polling `/token/current` as needed.
+  • Agent handles template-specific config (router vs AP) and reports status + SSH info for approval gating.
+  • Provide clear instructions for future updates (re-run installer or pull new script).
+
+Tracking notes:
+  - Mark each milestone status (draft/in-progress/completed) in this file as work proceeds; update the changelog + docs when features land.
+  - Validation includes installer dry-run, backend unit tests, UI behavior checks, and manual agent registration flows.

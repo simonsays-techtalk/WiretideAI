@@ -4,7 +4,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -20,13 +20,21 @@ from .auth import (
     verify_password,
     hash_password,
 )
+from .device_templates import (
+    UNKNOWN_DEVICE_TYPE,
+    VALID_TEMPLATE_TYPES,
+    get_device_template,
+    list_device_templates,
+)
 from .schemas import (
     ApproveRequest,
+    ChangePasswordRequest,
     ClearConfigRequest,
     ConfigResponse,
     DeviceOut,
     DeviceStatusOut,
     DevicesListResponse,
+    DeviceTemplateInfo,
     QueueConfigRequest,
     RegisterRequest,
     RegisterResponse,
@@ -36,7 +44,6 @@ from .schemas import (
     TokenResponse,
     UpdatePolicyRequest,
     MonitoringToggleRequest,
-    ChangePasswordRequest,
 )
 from .services import (
     ensure_settings_seeded,
@@ -48,7 +55,7 @@ from .services import (
 
 router = APIRouter()
 DEVICE_CONFIG_LIMIT = 10
-VALID_DEVICE_TYPES = {"router", "switch", "firewall", "access_point", "unknown"}
+VALID_DEVICE_TYPES = set(VALID_TEMPLATE_TYPES) | {UNKNOWN_DEVICE_TYPE}
 VALID_STATUS = {"waiting", "approved", "blocked"}
 ALLOWED_TRANSITIONS = {
     "waiting": {"approved", "blocked"},
@@ -169,6 +176,8 @@ def _persist_admin_hash(new_hash: str, settings) -> None:
 
 
 def _serialize_device(device: Device, status_row: Optional[DeviceStatus]) -> DeviceOut:
+    template_data = get_device_template(device.device_type)
+    template_info = DeviceTemplateInfo(**template_data) if template_data else None
     return DeviceOut(
         id=device.id,
         hostname=device.hostname,
@@ -183,6 +192,7 @@ def _serialize_device(device: Device, status_row: Optional[DeviceStatus]) -> Dev
         agent_update_allowed=device.agent_update_allowed,
         ip_last=device.ip_last,
         created_at=device.created_at,
+        template=template_info,
         status_row=DeviceStatusOut(
             dns_ok=status_row.dns_ok if status_row else None,
             ntp_ok=status_row.ntp_ok if status_row else None,
@@ -339,6 +349,13 @@ def get_config(
 def current_token(session: Session = Depends(get_session)) -> TokenResponse:
     settings = ensure_settings_seeded(session)
     return TokenResponse(shared_token=settings.shared_token)
+
+
+@router.get("/api/device-templates", response_model=List[DeviceTemplateInfo])
+def list_device_templates_route(
+    _: None = Depends(require_admin_token),
+) -> List[DeviceTemplateInfo]:
+    return list_device_templates()
 
 
 @router.patch("/api/settings/monitoring", response_model=SettingsResponse)
@@ -529,6 +546,7 @@ def devices_page(
             "filters": {"device_type": device_type, "status": status, "search": search},
             "admin_session": True,
             "admin_username": get_settings().admin_username,
+            "device_templates": list_device_templates(),
             "admin_has_password": bool(get_settings().admin_password_hash),
         },
     )

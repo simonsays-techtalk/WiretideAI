@@ -71,6 +71,13 @@ class TokenResponse(BaseModel):
     shared_token: str
 
 
+class DeviceTemplateInfo(BaseModel):
+    device_type: str
+    label: str
+    description: str
+    features: Dict[str, Any]
+
+
 class DeviceStatusOut(BaseModel):
     dns_ok: Optional[bool] = None
     ntp_ok: Optional[bool] = None
@@ -95,6 +102,7 @@ class DeviceOut(BaseModel):
     ip_last: Optional[str] = None
     created_at: datetime
     status_row: Optional[DeviceStatusOut] = None
+    template: Optional[DeviceTemplateInfo] = None
 
 
 class DevicesListResponse(BaseModel):

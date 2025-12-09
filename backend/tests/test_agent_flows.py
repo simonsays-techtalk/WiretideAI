@@ -184,3 +184,38 @@ def test_admin_list_settings_and_token_regen():
     )
     assert monitoring.status_code == 200
     assert monitoring.json()["monitoring_api_enabled"] is True
+
+
+def test_device_templates_endpoint_and_device_template_metadata():
+    templates_resp = client.get(
+        "/api/device-templates",
+        headers={"X-Admin-Token": "test-admin"},
+    )
+    assert templates_resp.status_code == 200
+    templates_payload = templates_resp.json()
+    assert any(t["device_type"] == "router" for t in templates_payload)
+
+    token = client.get("/token/current").json()["shared_token"]
+    reg = client.post(
+        "/register",
+        headers={"X-Shared-Token": token},
+        json={"hostname": "demo-router-template", "ssh_enabled": True},
+    )
+    device_id = reg.json()["device_id"]
+    client.post(
+        "/api/devices/approve",
+        headers={"X-Admin-Token": "test-admin"},
+        json={"device_id": device_id, "device_type": "router"},
+    )
+
+    devices = client.get(
+        "/api/devices",
+        headers={"X-Admin-Token": "test-admin"},
+    )
+    assert devices.status_code == 200
+    payload = devices.json()
+    item = next((d for d in payload["items"] if d["id"] == device_id), None)
+    assert item is not None
+    template_info = item.get("template")
+    assert template_info is not None
+    assert template_info["device_type"] == "router"

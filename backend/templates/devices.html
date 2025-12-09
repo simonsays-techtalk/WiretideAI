@@ -27,6 +27,7 @@
 <section class="table">
   <div class="table-head">
     <div>Hostname</div>
+    <div>Template</div>
     <div>Type</div>
     <div>Status</div>
     <div>SSH</div>
@@ -37,6 +38,31 @@
   {% for dev in items %}
   <div class="table-row">
     <div class="cell"><a class="link" href="/devices/{{ dev.id }}">{{ dev.hostname }}</a></div>
+    <div class="cell template-cell">
+      {% if dev.template %}
+        <div class="template-chip">{{ dev.template.label }}</div>
+        <p class="template-desc">{{ dev.template.description }}</p>
+      {% elif dev.status == "waiting" %}
+        <div class="template-picker">
+          <select class="template-select" aria-label="Select template for {{ dev.hostname }}">
+            <option value="">Pick template</option>
+            {% for tpl in device_templates %}
+              <option value="{{ tpl.device_type }}">{{ tpl.label }}</option>
+            {% endfor %}
+          </select>
+          <button
+            class="btn primary mini template-approve"
+            type="button"
+            data-action="approve-template"
+            data-device-id="{{ dev.id }}"
+          >
+            Approve
+          </button>
+        </div>
+      {% else %}
+        <span class="muted">—</span>
+      {% endif %}
+    </div>
     <div class="cell badge">{{ dev.device_type }}</div>
     <div class="cell badge">{{ dev.status }}</div>
     <div class="cell">{{ "yes" if dev.ssh_enabled else "no" }}</div>
@@ -89,6 +115,27 @@
       } catch (err) {
         alert('Approve failed');
       }
+    }
+    if (action === 'approve-template') {
+      const row = btn.closest('.table-row');
+      const select = row?.querySelector('.template-select');
+      const selected = select?.value;
+      if (!selected) {
+        alert('Select a template before approving.');
+        return;
+      }
+      try {
+        const resp = await fetch('/api/devices/approve', {
+          method: 'POST',
+          ...csrfOpts,
+          body: JSON.stringify({ device_id: Number(id), device_type: selected }),
+        });
+        if (resp.ok) location.reload();
+        else alert('Approve failed: ' + (await resp.text()));
+      } catch (err) {
+        alert('Approve failed');
+      }
+      return;
     }
     if (action === 'block') {
       try {
